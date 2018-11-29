@@ -70,40 +70,52 @@ int main(int argc, char * argv[]){
   printf("%d\n",shmid);
   struct types *spoint;
   spoint = shmat(shmid,NULL,0);
-
-  //  spoint->type1 = 11;
   memcpy(spoint,&counters,sizeof(struct types));
-  //printf("%d\n",spoint->type1);
-  //printf("%d\n",spoint->type2);
   shmdt(spoint);
-  close(pipe1[0]);//close all the pipes
-  close(pipe1[1]);
-  close(pipe2[0]);
-  close(pipe2[1]);
-    pid_t pid1,pid2;
+  pid_t pid1,pid2,pid3;
   pid1 = fork();
   if(pid1 == 0){
+    close(pipe2[0]);
+    close(pipe2[1]);//unused pipes
+    close(pipe1[0]);//close read side for program1
     printf("forking p1\n");
     char *args[] = {"program1",inName,p1W,semKey1,NULL};
     execv("./program1",args);
   }
   else{
-    sleep(.2);
-    
     pid2 = fork();
     if(pid2 == 0){
+      close(pipe1[1]);//close write side of program2
+      close(pipe2[0]);//close read side of pipe2
       printf("forking p2\n");
-      char *args[] = {"program2",p1R,p2W,semKey1,NULL};
+      char *args[] = {"program2",p1R,p2W,semKey1,semKey2,shmKey,NULL};
       if(execv("./program2",args) < 0){
 	printf("execv error p2\n");
 	printf("%d errno\n",errno);
       }
       
     }
-    
+    else{
+      pid3 = fork();
+      if(pid3 == 0){
+	close(pipe1[1]);
+	close(pipe1[0]);//unused pipes
+	close(pipe2[1]);//close write side of program2
+	printf("forking p3\n");
+	char *args[] = {"program3",p2R,semKey2,shmKey,outName,NULL};
+	if(execv("./program3",args) < 0){
+	  printf("execv error p2\n");
+	  printf("%d errno\n",errno);
+
+	}
+      }
+    }
   }
-  //int status;
+  int status;
   wait(NULL);
+  printf("program1 complete\n");
+  close(pipe1[0]);
+  close(pipe1[1]);
   //printf("program1 exit\n");
   //char buffer[100];
   //fflush(stdout);
@@ -111,6 +123,9 @@ int main(int argc, char * argv[]){
   //read(p1read,buffer,100);
   //printf("%s\n",buffer);
 
+  wait(NULL);
+  close(pipe2[0]);
+  close(pipe2[1]);
   wait(NULL);
   // char *string = "pipe string";
   //int p1write = atoi(p1W);

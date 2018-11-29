@@ -24,5 +24,13 @@ int main(int argc, char* argv[]){
   char *sem2Id = argv[2];
   char *shmKey = argv[3];
   char *outName = argv[4];
-  
+  int p2R = atoi(pipe2read);
+  char *buffer= malloc(100);
+  printf("program3\n");
+  while(read(p2R,buffer,100)>0){
+
+    printf("%s");
+
+  }
+  exit(0);
 }

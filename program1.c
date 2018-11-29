@@ -29,7 +29,7 @@ int main(int argc, char* argv[]){
   int charCount;
   fscanf(wc,"%d",&charCount);//grab the int value for the char count
   pclose(wc);//close the pipe
-  //  printf("size of the input file is : %d\n",charCount);
+  printf("size of the input file is : %d\n",charCount);
   sem_t *sem1 = sem_open(semId,O_CREAT);
   int file = open(filename,O_RDONLY);//open the input file
   char *buffer = malloc(charCount);//input file data buffer
@@ -44,18 +44,21 @@ int main(int argc, char* argv[]){
   char *word2 = malloc(250);//word buffer for formatting
   //sem_post(sem1);
   while (word != NULL){//while there are still words
-
+    int semval;
+    sem_getvalue(sem1,&semval);
+    if(semval == 1)
+      sleep(.2);
     sprintf(word2,"%s\n\0",word);//one word per line
-    //  sem_wait(sem1);
+    //sem_wait(sem1);
     write(p1W,word2,100);//write to pipe1
     sem_post(sem1);
+    sleep(1);
     printf("%s",word2);//verify the word
     word = strtok(NULL," ");
-    sleep(.2);
   }
   close(p1W);
   sem_close(sem1);
   free(buffer);free(word);free(word2);//free the string buffers
   //  printf("temp1.data written\n");
-  
+  exit(0);
 }

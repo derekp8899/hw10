@@ -23,13 +23,14 @@ int main(int argc, char* argv[]){
   char *pipe1read = argv[1];
   char *pipe2write = argv[2];
   char *sem1Id = argv[3];
-  //char *sem2Id = argv[4];
-  //char *shmKey = argv[5];
+  char *sem2Id = argv[4];
+  char *shmKey = argv[5];
   int p1R = atoi(pipe1read);
+  int p2W = atoi(pipe2write);
   sem_t *sem1 = sem_open(sem1Id,O_CREAT);
   char *buffer = malloc(100);
   printf("starting program2\n\n");
-  int file = open("temp1.data",O_RDONLY);//open the input file
+  // int file = open("temp1.data",O_RDONLY);//open the input file
   sem_wait(sem1);  
   read(p1R,buffer,100);//read the data in from the file
   //sem_post(sem1);
@@ -40,15 +41,19 @@ int main(int argc, char* argv[]){
   char *word2 = malloc(250);//word buffer for formatting
   printf("program2\n\n");
   printf("%s",buffer);
-  write(temp2,buffer,100);
   sem_wait(sem1);
   while(read(p1R,buffer,100) > 0){
     //sem_post(sem1);
     printf("%s",buffer);
     write(temp2,buffer,strlen(buffer));
-    sleep(.2);
-    sem_wait(sem1);
+    write(p2W,buffer,100);
+    int semval;
+    sem_getvalue(sem1,&semval);
+    if(semval==0)
+      sleep(.2);
+    //sem_wait(sem1);
   }
+  printf("reading complete\n");
   //  printf("%s",word);//verify the word
   /* int share1= 0;int share2 = 0;//counters for each 'type'
   while (word != NULL){//while there are still words
@@ -90,10 +95,7 @@ int main(int argc, char* argv[]){
   
   //  printf("share counts %d %d \n",share1,share2);//verify the counters
   /*
-  system("touch shared1.dat");
-  system("touch shared2.dat");//create the shared data files
   int shared1 = open("shared1.dat",O_WRONLY);
-  char *sharedbuf = malloc (100);
   sprintf(sharedbuf,"%d\n",share1);
   write(shared1,sharedbuf,strlen(sharedbuf));//write count of shared1
   int shared2 = open("shared2.dat",O_WRONLY);
