@@ -16,7 +16,7 @@ program1.c
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
+#include <semaphore.h>
 
 int main(int argc, char* argv[]){
 
@@ -30,6 +30,7 @@ int main(int argc, char* argv[]){
   fscanf(wc,"%d",&charCount);//grab the int value for the char count
   pclose(wc);//close the pipe
   //  printf("size of the input file is : %d\n",charCount);
+  sem_t *sem1 = sem_open(semId,O_CREAT);
   int file = open(filename,O_RDONLY);//open the input file
   char *buffer = malloc(charCount);//input file data buffer
   read(file,buffer,charCount);//read the data in from the file
@@ -37,16 +38,23 @@ int main(int argc, char* argv[]){
   char *word = malloc(250);//word buffer
   //  system("touch temp1.data");//create the temp1.data file
   //int temp1 = open("temp1.data",O_WRONLY);//open temp1 for writing
-  int p1R = aroi(pipe1write);//get the pipe1read FD
+  int p1W = atoi(pipe1write);//get the pipe1read FD
   word = strtok(buffer," ");//grab first word from the input buffer
+  printf("program1\n\n");
   char *word2 = malloc(250);//word buffer for formatting
+  //sem_post(sem1);
   while (word != NULL){//while there are still words
 
-    sprintf(word2,"%s\n",word);//one word per line
-    write(p1R,word2,strlen(word)+1);//write to pipe1
-    //    printf("%s",word2);//verify the word
+    sprintf(word2,"%s\n\0",word);//one word per line
+    //  sem_wait(sem1);
+    write(p1W,word2,100);//write to pipe1
+    sem_post(sem1);
+    printf("%s",word2);//verify the word
     word = strtok(NULL," ");
+    sleep(.2);
   }
+  close(p1W);
+  sem_close(sem1);
   free(buffer);free(word);free(word2);//free the string buffers
   //  printf("temp1.data written\n");
   
