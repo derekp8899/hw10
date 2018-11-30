@@ -37,7 +37,7 @@ int main(int argc, char * argv[]){
     char *outName = argv[2];
   
   system("echo dpopowski > key.txt");//key file for use with ftok
-  struct types counters;
+  //  struct types counters;
   int pipe1[2];//pipe FDs
   int pipe2[2];
   pipe(pipe1);
@@ -50,27 +50,31 @@ int main(int argc, char * argv[]){
   char* p2W = malloc(20);
   sprintf(p2R,"%d",pipe2[0]);
   sprintf(p2W,"%d",pipe2[1]);//set pipe2 end FDs to strings
-  counters.type1 = 12;
-  counters.type2 = 44;
+  //  counters.type1 = 12;
+  //  counters.type2 = 44;
   char *shmKey = malloc(20);
   int shmintkey = 4321;
   char *semKey1 = "/derek1";
   char *semKey2 = "/derek2";
   sem_open(semKey1,O_CREAT,0666,0);
+  sem_open(semKey2,O_CREAT,0666,0);
   sprintf(shmKey,"%d",shmintkey);//create shmkey string for passing to program2 and 3 
   key_t shmkey = ftok("key.txt",atoi(shmKey));//create the SHM key
 
-  int shmid = shmget(shmkey, sizeof(struct types), IPC_CREAT | 0666);//generate the shared memory
-
+  int shmid = shmget(shmkey, sizeof(int*)*2, IPC_CREAT | 0666);//generate the shared memory
+  sprintf(shmKey,"%d",shmid);
   if(shmid<0){
     printf("error\n");
     exit(1);
 
   }
   printf("%d\n",shmid);
-  struct types *spoint;
+  int *spoint;
   spoint = shmat(shmid,NULL,0);
-  memcpy(spoint,&counters,sizeof(struct types));
+  *spoint = 0;
+  *(spoint+1) = 0;
+  printf("%d %d \n\n",*spoint,*(spoint+1));
+  //  memcpy(spoint,&counters,sizeof(struct types));
   shmdt(spoint);
   pid_t pid1,pid2,pid3;
   pid1 = fork();
@@ -116,20 +120,13 @@ int main(int argc, char * argv[]){
   printf("program1 complete\n");
   close(pipe1[0]);
   close(pipe1[1]);
-  //printf("program1 exit\n");
-  //char buffer[100];
-  //fflush(stdout);
-  //int p1read = atoi(p1R);
-  //read(p1read,buffer,100);
-  //printf("%s\n",buffer);
 
   wait(NULL);
   close(pipe2[0]);
   close(pipe2[1]);
   wait(NULL);
-  // char *string = "pipe string";
-  //int p1write = atoi(p1W);
-  //write(p1write,string,strlen(string)+1);
+
   shmctl(shmid, IPC_RMID, NULL);//remove the shared memory
   sem_unlink(semKey1);
+  sem_unlink(semKey2);
 }
