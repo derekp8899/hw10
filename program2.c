@@ -17,7 +17,7 @@ program2.c
 #include <sys/stat.h>
 #include <unistd.h>
 #include <semaphore.h>
-char *formatWord(char* buffer);//to format words read in from the pipe
+char *formatWord(char* buffer,int* spoint);//to format words read in from the pipe
 int main(int argc, char* argv[]){
 
   char *pipe1read = argv[1];
@@ -33,6 +33,7 @@ int main(int argc, char* argv[]){
   int *spoint;
   spoint = shmat(atoi(shmId),NULL,0);
   *spoint=0;
+  *(spoint+1)=0;
   printf("starting program2\n\n");
   // int file = open("temp1.data",O_RDONLY);//open the input file
   sem_wait(sem1);  
@@ -50,9 +51,8 @@ int main(int argc, char* argv[]){
     //sem_post(sem1);
     printf("%s",buffer);
     write(temp2,buffer,strlen(buffer));
-    word = formatWord(buffer);
+    word = formatWord(buffer,spoint);
     write(p2W,word,100);
-    (*spoint)++;
     sem_post(sem2);
     int semval;
     sem_getvalue(sem1,&semval);
@@ -117,14 +117,14 @@ int main(int argc, char* argv[]){
   //printf("temp2.data written\nshared1.dat written\nshared2.dat written\n");
 
 }
-char *formatWord(char *buffer){
+char *formatWord(char *buffer, int *spoint){
 
   char* word = malloc(100);
   word = strtok(buffer,"\n");//grab word from the input buffer
   char* word2 = malloc(100);
   if(word[0] == 65||word[0] == 69||word[0] == 73||word[0] == 79||word[0] == 85||word[0] == 97||word[0] == 101||word[0] == 105||word[0] == 111||word[0] == 117){//if word starts with a vowel (upper or lower)
     sprintf(word2,"%sray\n",word);//format the word
-    //    share1++;//inc shared1
+    (*spoint)++;//inc 'type1'
   }
   else{
     
@@ -151,7 +151,7 @@ char *formatWord(char *buffer){
       word[strlen(word)-1] = temp;//move frist character to the end
       sprintf(word2,"%say\n",word,temppunc);//format the word
     }
-    //    share2++;//inc shared2
+    *(spoint+1)+=1;//inc 'type2'
   }
   printf("%s",word2);//print the word to verify
   return word2;
