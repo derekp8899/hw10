@@ -20,12 +20,6 @@ master.c
 #include <errno.h>
 #include <semaphore.h>
 
-struct types{//struct for storing of type1 and type2 word counts
-
-  int type1;
-  int type2;
-
-};
 
 int main(int argc, char * argv[]){
   
@@ -37,7 +31,6 @@ int main(int argc, char * argv[]){
     char *outName = argv[2];
   
   system("echo dpopowski > key.txt");//key file for use with ftok
-  //  struct types counters;
   int pipe1[2];//pipe FDs
   int pipe2[2];
   pipe(pipe1);
@@ -50,8 +43,6 @@ int main(int argc, char * argv[]){
   char* p2W = malloc(20);
   sprintf(p2R,"%d",pipe2[0]);
   sprintf(p2W,"%d",pipe2[1]);//set pipe2 end FDs to strings
-  //  counters.type1 = 12;
-  //  counters.type2 = 44;
   char *shmKey = malloc(20);
   int shmintkey = 4321;
   char *semKey1 = "/derek1";
@@ -63,18 +54,16 @@ int main(int argc, char * argv[]){
 
   int shmid = shmget(shmkey, sizeof(int*)*2, IPC_CREAT | 0666);//generate the shared memory
   sprintf(shmKey,"%d",shmid);
-  if(shmid<0){
+  if(shmid<0){//check for error in creating shm
     printf("error\n");
     exit(1);
 
   }
-  printf("%d\n",shmid);
   int *spoint;
   spoint = shmat(shmid,NULL,0);
   *spoint = 0;
   *(spoint+1) = 0;
-  printf("%d %d \n\n",*spoint,*(spoint+1));
-  //  memcpy(spoint,&counters,sizeof(struct types));
+  //  printf("%d %d \n\n",*spoint,*(spoint+1));
   shmdt(spoint);
   pid_t pid1,pid2,pid3;
   pid1 = fork();
@@ -82,7 +71,7 @@ int main(int argc, char * argv[]){
     close(pipe2[0]);
     close(pipe2[1]);//unused pipes
     close(pipe1[0]);//close read side for program1
-    printf("forking p1\n");
+    printf("forking program1\n");
     char *args[] = {"program1",inName,p1W,semKey1,NULL};
     execv("./program1",args);
   }
@@ -91,7 +80,7 @@ int main(int argc, char * argv[]){
     if(pid2 == 0){
       close(pipe1[1]);//close write side of program2
       close(pipe2[0]);//close read side of pipe2
-      printf("forking p2\n");
+      printf("forking program2\n");
       char *args[] = {"program2",p1R,p2W,semKey1,semKey2,shmKey,NULL};
       if(execv("./program2",args) < 0){
 	printf("execv error p2\n");
@@ -105,7 +94,7 @@ int main(int argc, char * argv[]){
 	close(pipe1[1]);
 	close(pipe1[0]);//unused pipes
 	close(pipe2[1]);//close write side of program2
-	printf("forking p3\n");
+	printf("forking program3\n");
 	char *args[] = {"program3",p2R,semKey2,shmKey,outName,NULL};
 	if(execv("./program3",args) < 0){
 	  printf("execv error p2\n");
@@ -119,14 +108,16 @@ int main(int argc, char * argv[]){
   wait(NULL);
   printf("program1 complete\n");
   close(pipe1[0]);
-  close(pipe1[1]);
+  close(pipe1[1]);//close the ends for pipe1
 
   wait(NULL);
+  printf("program2 complete\n");
   close(pipe2[0]);
-  close(pipe2[1]);
+  close(pipe2[1]);//close the ends for pipe2
   wait(NULL);
-
+  printf("program3 complete\n");
+  system("rm key.txt");
   shmctl(shmid, IPC_RMID, NULL);//remove the shared memory
   sem_unlink(semKey1);
-  sem_unlink(semKey2);
+  sem_unlink(semKey2);//remove the two semaphores
 }
